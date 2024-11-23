@@ -14,6 +14,7 @@ setting_up_container
 network_check
 update_os
 
+msg_info "Installing jappish84-repo"
 msg_info "Installing Dependencies (Patience)"
 $STD apt-get install -y {curl,sudo,mc,git,gpg,automake,build-essential,xz-utils,libtool,ccache,pkg-config,libgtk-3-dev,libavcodec-dev,libavformat-dev,libswscale-dev,libv4l-dev,libxvidcore-dev,libx264-dev,libjpeg-dev,libpng-dev,libtiff-dev,gfortran,openexr,libatlas-base-dev,libssl-dev,libtbb2,libtbb-dev,libdc1394-22-dev,libopenexr-dev,libgstreamer-plugins-base1.0-dev,libgstreamer1.0-dev,gcc,gfortran,libopenblas-dev,liblapack-dev,libusb-1.0-0-dev,jq,moreutils}
 msg_ok "Installed Dependencies"
@@ -104,39 +105,41 @@ fi
 echo "tmpfs   /tmp/cache      tmpfs   defaults        0       0" >> /etc/fstab
 msg_ok "Installed Frigate $RELEASE"
 
-if grep -q -o -m1 -E 'avx[^ ]* | sse4_2' /proc/cpuinfo; then
-  msg_ok "AVX or SSE 4.2 Support Detected"
-  msg_info "Installing Openvino Object Detection Model (Resilience)"
-  $STD pip install -r /opt/frigate/docker/main/requirements-ov.txt
-  cd /opt/frigate/models
-  export ENABLE_ANALYTICS=NO
-  $STD /usr/local/bin/omz_downloader --name ssdlite_mobilenet_v2 --num_attempts 2
-  $STD /usr/local/bin/omz_converter --name ssdlite_mobilenet_v2 --precision FP16 --mo /usr/local/bin/mo
-  cd /
-  cp -r /opt/frigate/models/public/ssdlite_mobilenet_v2 openvino-model
-  wget -q https://github.com/openvinotoolkit/open_model_zoo/raw/master/data/dataset_classes/coco_91cl_bkgr.txt -O openvino-model/coco_91cl_bkgr.txt
-  sed -i 's/truck/car/g' openvino-model/coco_91cl_bkgr.txt
-  cat <<EOF >>/config/config.yml
-detectors:
-  ov:
-    type: openvino
-    device: CPU
-    model:
-      path: /openvino-model/FP16/ssdlite_mobilenet_v2.xml
-model:
-  width: 300
-  height: 300
-  input_tensor: nhwc
-  input_pixel_format: bgr
-  labelmap_path: /openvino-model/coco_91cl_bkgr.txt
-EOF
-  msg_ok "Installed Openvino Object Detection Model"
-else
-  cat <<EOF >>/config/config.yml
-model:
-  path: /cpu_model.tflite
-EOF
-fi
+
+msg_info "Skipping OpenVino install"
+# if grep -q -o -m1 -E 'avx[^ ]* | sse4_2' /proc/cpuinfo; then
+#   msg_ok "AVX or SSE 4.2 Support Detected"
+#   msg_info "Installing Openvino Object Detection Model (Resilience)"
+#   $STD pip install -r /opt/frigate/docker/main/requirements-ov.txt
+#   cd /opt/frigate/models
+#   export ENABLE_ANALYTICS=NO
+#   $STD /usr/local/bin/omz_downloader --name ssdlite_mobilenet_v2 --num_attempts 2
+#   $STD /usr/local/bin/omz_converter --name ssdlite_mobilenet_v2 --precision FP16 --mo /usr/local/bin/mo
+#   cd /
+#   cp -r /opt/frigate/models/public/ssdlite_mobilenet_v2 openvino-model
+#   wget -q https://github.com/openvinotoolkit/open_model_zoo/raw/master/data/dataset_classes/coco_91cl_bkgr.txt -O openvino-model/coco_91cl_bkgr.txt
+#   sed -i 's/truck/car/g' openvino-model/coco_91cl_bkgr.txt
+#   cat <<EOF >>/config/config.yml
+# detectors:
+#   ov:
+#     type: openvino
+#     device: CPU
+#     model:
+#       path: /openvino-model/FP16/ssdlite_mobilenet_v2.xml
+# model:
+#   width: 300
+#   height: 300
+#   input_tensor: nhwc
+#   input_pixel_format: bgr
+#   labelmap_path: /openvino-model/coco_91cl_bkgr.txt
+# EOF
+#   msg_ok "Installed Openvino Object Detection Model"
+# else
+#   cat <<EOF >>/config/config.yml
+# model:
+#   path: /cpu_model.tflite
+# EOF
+# fi
 
 msg_info "Installing Coral Object Detection Model (Patience)"
 cd /opt/frigate
